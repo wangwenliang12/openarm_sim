@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/lcm_pose_subscriber.dir/src/subscriber/lcm_pose_subscriber.cpp.o -o lcm_pose_subscriber  -llcm -lglib-2.0 

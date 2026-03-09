@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/lcm_pose_publisher.dir/src/publisher/lcm_pose_publisher.cpp.o -o lcm_pose_publisher  -llcm -lglib-2.0 
