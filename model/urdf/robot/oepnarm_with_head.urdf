@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="oepnarm_with_head">
+  <link
+    name="head_link">
+    <inertial>
+      <origin
+        xyz="-0.00028316 -2.8843E-08 -0.052418"
+        rpy="0 0 0" />
+      <mass
+        value="0.051179" />
+      <inertia
+        ixx="1.86E-05"
+        ixy="1.0497E-20"
+        ixz="-4.882E-10"
+        iyy="2.932E-05"
+        iyz="1.6302E-21"
+        izz="4.5153E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://oepnarm_with_head/meshes/head_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://oepnarm_with_head/meshes/head_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="head_link_1">
+    <inertial>
+      <origin
+        xyz="0.00014531 -0.00070511 -0.020389"
+        rpy="0 0 0" />
+      <mass
+        value="0.90325" />
+      <inertia
+        ixx="0.0003341"
+        ixy="-4.2445E-08"
+        ixz="2.128E-06"
+        iyy="0.0003425"
+        iyz="5.4062E-06"
+        izz="0.00036639" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://oepnarm_with_head/meshes/head_link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.64706 0.61961 0.58824 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://oepnarm_with_head/meshes/head_link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="head_joint_1"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="head_link" />
+    <child
+      link="head_link_1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1416"
+      upper="3.1416"
+      effort="20"
+      velocity="10" />
+    <dynamics
+      damping="0.01"
+      friction="0.005" />
+  </joint>
+  <link
+    name="head_link_2">
+    <inertial>
+      <origin
+        xyz="0.00052402 -0.020605 2.1821E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.90595" />
+      <inertia
+        ixx="0.00034148"
+        ixy="5.6411E-06"
+        ixz="-2.0716E-06"
+        iyy="0.00037256"
+        iyz="-7.282E-07"
+        izz="0.00034186" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://oepnarm_with_head/meshes/head_link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.64706 0.61961 0.58824 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://oepnarm_with_head/meshes/head_link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="head_joint_2"
+    type="revolute">
+    <origin
+      xyz="-0.00060308 0.025393 0.041392"
+      rpy="0 0 0.023745" />
+    <parent
+      link="head_link_1" />
+    <child
+      link="head_link_2" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-0.523"
+      upper="0.523"
+      effort="0"
+      velocity="0" />
+    <dynamics
+      damping="0.1"
+      friction="0.05" />
+  </joint>
+  <link
+    name="cam_link">
+    <inertial>
+      <origin
+        xyz="-0.00014092 0.00048127 -0.01296"
+        rpy="0 0 0" />
+      <mass
+        value="0.57964" />
+      <inertia
+        ixx="0.00068616"
+        ixy="-3.2392E-07"
+        ixz="-6.8493E-07"
+        iyy="6.4091E-05"
+        iyz="-1.9009E-07"
+        izz="0.00069016" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://oepnarm_with_head/meshes/cam_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.2 0.2 0.2 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://oepnarm_with_head/meshes/cam_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="camera"
+    type="fixed">
+    <origin
+      xyz="0.06199 -0.018527 -0.0018607"
+      rpy="3.1416 1.2591 -3.1416" />
+    <parent
+      link="head_link_2" />
+    <child
+      link="cam_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+</robot>

@@ -1,0 +1,16 @@
+package openarm_lcm;
+
+struct ObjectPose
+{
+    int64_t utime;
+    string object_id;
+    double position[3];
+    double quaternion[4];
+}
+
+struct ObjectPoseArray
+{
+    int64_t utime;
+    int32_t num_poses;
+    ObjectPose poses[num_poses];
+}
