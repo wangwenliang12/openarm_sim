@@ -8,6 +8,10 @@ import mujoco.viewer
 
 LIB_FILENAME = "openarm_closed_loop.so"
 MODEL_PATH = "model/openarm_head.xml"
+REQUIRED_JOINTS = (
+    "openarm_left_joint1",
+    "openarm_right_joint1",
+)
 
 
 def main() -> int:
@@ -32,6 +36,17 @@ def main() -> int:
     core_lib.sim_close.restype = None
 
     model = mujoco.MjModel.from_xml_path(model_path)
+    missing_joints = [
+        joint_name for joint_name in REQUIRED_JOINTS
+        if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name) < 0
+    ]
+    if missing_joints:
+        print(
+            "[错误] 当前模型缺少闭环控制所需关节: "
+            + ", ".join(missing_joints)
+            + f"。请检查加载的模型文件是否正确: {model_path}"
+        )
+        return 1
     data = mujoco.MjData(model)
 
     print("正在调用闭环控制 Init...")

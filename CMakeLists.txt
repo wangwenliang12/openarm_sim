@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(OPENARM_BUILD_LCM_TOOLS "Build LCM pose pub/sub tools" ON)
 
 # --- 1. Find Pinocchio ---
+find_program(SHELL_PYTHON3_EXECUTABLE NAMES python3 REQUIRED)
 find_package(Eigen3 QUIET)
 find_package(pinocchio QUIET)
 
@@ -17,11 +18,23 @@ else()
     message(FATAL_ERROR "Pinocchio not found! Please install ros-<distro>-pinocchio")
 endif()
 
-# --- 2. Configure MuJoCo (Use Python Package Headers) ---
-set(MUJOCO_PY_INCLUDE_DIR "/home/wwl/.local/lib/python3.12/site-packages/mujoco/include")
-set(MUJOCO_PY_LIB_DIR "/home/wwl/.local/lib/python3.12/site-packages/mujoco")
+# --- 2. Configure MuJoCo (Match active Python package version) ---
+execute_process(
+    COMMAND "${SHELL_PYTHON3_EXECUTABLE}" -c
+            "import os, mujoco; print(os.path.dirname(mujoco.__file__))"
+    OUTPUT_VARIABLE MUJOCO_PY_LIB_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE MUJOCO_PY_QUERY_RESULT
+)
+
+if(NOT MUJOCO_PY_QUERY_RESULT EQUAL 0 OR MUJOCO_PY_LIB_DIR STREQUAL "")
+    message(FATAL_ERROR "Could not resolve MuJoCo package path from ${SHELL_PYTHON3_EXECUTABLE}")
+endif()
+
+set(MUJOCO_PY_INCLUDE_DIR "${MUJOCO_PY_LIB_DIR}/include")
+unset(MUJOCO_RUNTIME_LIB CACHE)
 find_library(MUJOCO_RUNTIME_LIB
-    NAMES mujoco libmujoco.so.3.4.0 libmujoco.so.3
+    NAMES mujoco libmujoco.so.3.5.0 libmujoco.so.3.4.0 libmujoco.so.3
     PATHS "${MUJOCO_PY_LIB_DIR}"
     NO_DEFAULT_PATH
 )
@@ -101,6 +114,9 @@ if(OPENARM_BUILD_LCM_TOOLS)
                 src/publisher/lcm_pose_publisher.cpp
                 src/subscriber/lcm_pose_subscriber.cpp
                 src/state_machine/grasp_state_machine.cpp
+                src/robot/robot_kinematics.cpp
+                src/task/joint_trajectory_planner.cpp
+                src/task/manipulate_task.cpp
                 src/runtime/closed_loop_runtime.cpp
             )
 
