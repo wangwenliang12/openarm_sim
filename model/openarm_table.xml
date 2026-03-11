@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="openarm_table">
+  <asset>
+    <material name="champagne_wood" rgba="1.0 0.75 0.8 1" specular="0.2" shininess="0.3"/>
+    <material name="white_carving" rgba="1.0 1.0 1.0 1" specular="0.1" shininess="0.1"/>
+  </asset>
+
+  <worldbody>
+    <body name="ornate_table" pos="0.5 0 0">
+      <geom name="table_top" type="cylinder" size="0.35 0.02" pos="0 0 0.40"
+            material="champagne_wood" contype="1" conaffinity="1"
+            friction="0.05 0.01 0.01"/>
+      <geom name="table_rim" type="cylinder" size="0.355 0.015" pos="0 0 0.385"
+            material="white_carving"/>
+      <geom name="base_cross_1" type="box" size="0.22 0.03 0.02" pos="0 0 0.06"
+            material="champagne_wood"/>
+      <geom name="base_cross_2" type="box" size="0.03 0.22 0.02" pos="0 0 0.06"
+            material="champagne_wood"/>
+      <geom name="center_knob" type="cylinder" size="0.04 0.05" pos="0 0 0.05"
+            material="white_carving"/>
+
+      <body name="leg_front">
+        <geom type="capsule" fromto="0.25 0 0.06 0.20 0 0.22" size="0.025"
+              material="champagne_wood"/>
+        <geom type="capsule" fromto="0.20 0 0.22 0.30 0 0.38" size="0.035"
+              material="champagne_wood"/>
+        <geom type="sphere" pos="0.30 0 0.36" size="0.04" material="white_carving"/>
+        <geom type="box" pos="0.25 0 0.04" size="0.04 0.03 0.02"
+              material="champagne_wood"/>
+      </body>
+
+      <body name="leg_back">
+        <geom type="capsule" fromto="-0.25 0 0.06 -0.20 0 0.22" size="0.025"
+              material="champagne_wood"/>
+        <geom type="capsule" fromto="-0.20 0 0.22 -0.30 0 0.38" size="0.035"
+              material="champagne_wood"/>
+        <geom type="sphere" pos="-0.30 0 0.36" size="0.04" material="white_carving"/>
+        <geom type="box" pos="-0.25 0 0.04" size="0.04 0.03 0.02"
+              material="champagne_wood"/>
+      </body>
+
+      <body name="leg_left">
+        <geom type="capsule" fromto="0 0.25 0.06 0 0.20 0.22" size="0.025"
+              material="champagne_wood"/>
+        <geom type="capsule" fromto="0 0.20 0.22 0 0.30 0.38" size="0.035"
+              material="champagne_wood"/>
+        <geom type="sphere" pos="0 0.30 0.36" size="0.04" material="white_carving"/>
+        <geom type="box" pos="0 0.25 0.04" size="0.03 0.04 0.02"
+              material="champagne_wood"/>
+      </body>
+
+      <body name="leg_right">
+        <geom type="capsule" fromto="0 -0.25 0.06 0 -0.20 0.22" size="0.025"
+              material="champagne_wood"/>
+        <geom type="capsule" fromto="0 -0.20 0.22 0 -0.30 0.38" size="0.035"
+              material="champagne_wood"/>
+        <geom type="sphere" pos="0 -0.30 0.36" size="0.04" material="white_carving"/>
+        <geom type="box" pos="0 -0.25 0.04" size="0.03 0.04 0.02"
+              material="champagne_wood"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <mujoco model="openarm">
+  <include file="openarm_table.xml"/>
   <option gravity = "0 0 -9.81" timestep="0.002" integrator = "RK4">
   </option>
 
@@ -9,20 +10,26 @@
     <default class="robot">
       <default class="motor_DM8009">
         <joint frictionloss="0.1" damping="0.5" limited="true" type="hinge" />
-        <motor forcelimited="true" forcerange="-40 40" />
+        <!-- <motor forcelimited="true" forcerange="-40 40" /> -->
+        <position forcelimited="true" forcerange="-40 40" ctrllimited="true"
+          kp="80.0" kv="10.0"/>
       </default>
       <default class="motor_DM4340">
         <joint frictionloss="0.1" damping="0.5" limited="true" type="hinge" />
-        <motor forcelimited="true" forcerange="-27 27" />
+        <!-- <motor forcelimited="true" forcerange="-27 27" /> -->
+        <position forcelimited="true" forcerange="-27 27" ctrllimited="true"
+          kp="40.0" kv="10.0"/>
       </default>
       <default class="motor_DM4310">
         <joint frictionloss="0.1" damping="0.5" limited="true" type="hinge" />
-        <motor forcelimited="true" forcerange="-7 7" />
+        <!-- <motor forcelimited="true" forcerange="-7 7" /> -->
+        <position forcelimited="true" forcerange="-7 7" ctrllimited="true"
+          kp="40.0" kv="10.0"/>
       </default>
       <default class="motor_finger">
-        <joint limited="true" type="slide" damping="2" stiffness="0.5" />
+        <joint limited="true" type="slide" damping="0.1" stiffness="0.0" />
         <position forcelimited="true" forcerange="-333 333" ctrllimited="true" ctrlrange="0 0.044"
-          kp="15.0"/>
+          kp="200.0" kv="10.0"/>
       </default>
       <default class="collision">
         <geom material="collision_material" condim="3" conaffinity="1" priority="1" group="3"
@@ -36,7 +43,7 @@
     </default>
   </default>
 
-  <compiler angle="radian" meshdir="meshes" />
+  <compiler angle="radian" meshdir="meshes" balanceinertia="true" />
 
 
 
@@ -115,35 +122,29 @@
     <material name="block_red" rgba="0.90 0.10 0.10 1.0" />
     <material name="block_yellow" rgba="0.95 0.85 0.10 1.0" />
     <material name="block_blue" rgba="0.10 0.25 0.90 1.0" />
-    <mesh name="table_collision_mesh" file="collision/table/StylishDesk.obj" scale="0.01 0.01 0.01"
-      inertia="shell" />
-    <mesh name="table_visual_mesh" file="visual/table/StylishDesk.obj" scale="0.005 0.005 0.005"
-      inertia="shell" />
   </asset>
 
   <worldbody>
     <light pos="0 0 6" dir="0 0 -1" directional="true" castshadow="true" />
     <geom name="floor" pos="0 0 0" size="0 0 .05" type="plane" material="grid" condim="3" />
-    <body name="table" pos="0.55 0 0">
-      <geom name="table_visual" type="mesh" mesh="table_visual_mesh" class="visual"
-        euler="1.5708 0 0" pos="0 0 0.58" />
-      <geom name="table_collision" type="box" pos="0 0 0.60" size="0.20 0.20 0.02"
-        friction="1.0 0.01 0.01" />
-    </body>
-
-    <body name="red_block" pos="0.42 -0.08 0.641">
+    <body name="red_block" pos="0.40 -0.06 0.44">
       <freejoint name="red_block_freejoint" />
+      <!-- <joint name="cube_x" type="slide" axis="1 0 0" damping="10.0"/>
+      <joint name="cube_y" type="slide" axis="0 1 0" damping="10.0"/>
+      <joint name="cube_z" type="slide" axis="0 0 1" damping="10.0"/> -->
+      <!-- <geom name="red_block_geom" type="box" size="0.02 0.02 0.02" material="block_red"
+        mass="0.1" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001" margin="0.005" /> -->
       <geom name="red_block_geom" type="box" size="0.02 0.02 0.02" material="block_red"
-        mass="0.008" condim="3" friction="3.0 0.03 0.03" />
+        mass="0.08" condim="3" friction="1.0 0.01 0.02" />
     </body>
 
-    <body name="yellow_block" pos="0.42 0.0 0.641">
+    <body name="yellow_block" pos="0.58 0.12 0.44">
       <freejoint name="yellow_block_freejoint" />
       <geom name="yellow_block_geom" type="box" size="0.02 0.02 0.02" material="block_yellow"
         mass="0.08" condim="3" friction="1.0 0.01 0.01" />
     </body>
 
-    <body name="blue_block" pos="0.42 0.08 0.641">
+    <body name="blue_block" pos="0.58 -0.14 0.44">
       <freejoint name="blue_block_freejoint" />
       <geom name="blue_block_geom" type="box" size="0.02 0.02 0.02" material="block_blue"
         mass="0.08" condim="3" friction="1.0 0.01 0.01" />
@@ -501,7 +502,8 @@
                               diaginertia="2.3749999999999997e-06 2.3749999999999997e-06 7.5e-07" />
                             <geom name="openarm_right_right_finger_collision"
                               pos="0.0 0.05 -0.673001" quat="1.0 0.0 0.0 0.0" type="mesh"
-                              mesh="finger_collision_left" class="collision" />
+                              mesh="finger_collision_left" class="collision" condim="6"/>
+                              <!-- friction="2.0 0.02 0.02" --> 
                             <geom name="openarm_right_right_finger_visual_0"
                               pos="0.0 0.05 -0.673001" quat="1.0 0.0 0.0 0.0"
                               material="default_material" type="mesh" mesh="finger_0_flip.obj"
@@ -519,7 +521,8 @@
                               diaginertia="2.3749999999999997e-06 2.3749999999999997e-06 7.5e-07" />
                             <geom name="openarm_right_left_finger_collision"
                               pos="0.0 -0.05 -0.673001" quat="1.0 0.0 0.0 0.0" type="mesh"
-                              mesh="finger_collision" class="collision" />
+                              mesh="finger_collision" class="collision" condim="6"/>
+                              <!-- friction="2.0 0.02 0.02" --> 
                             <geom name="openarm_right_left_finger_visual_0"
                               pos="0.0 -0.05 -0.673001" quat="1.0 0.0 0.0 0.0"
                               material="default_material" type="mesh" mesh="finger_0.obj"
@@ -584,9 +587,9 @@
              kp="10" kv="0.5" ctrlrange="-1.570796 1.570796" forcerange="-7 7" />
     <!-- 左爪 -->
     <position name="left_finger1_ctrl" joint="openarm_left_finger_joint1"
-             kp="10" kv="0.5" ctrlrange="0 0.044" forcerange="-333 333" />
+             kp="15" kv="0.5" ctrlrange="0 0.044" forcerange="-333 333" />
     <position name="left_finger2_ctrl" joint="openarm_left_finger_joint2"
-             kp="10" kv="0.5" ctrlrange="0 0.044" forcerange="-333 333" />
+             kp="15" kv="0.5" ctrlrange="0 0.044" forcerange="-333 333" />
     
     <!-- 右臂位置控制 -->
     <position name="right_joint1_ctrl" joint="openarm_right_joint1"
@@ -605,9 +608,9 @@
              kp="8" kv="0.6" ctrlrange="-1.570796 1.570796" forcerange="-7 7" />
     <!-- 右爪 -->
     <position name="right_finger1_ctrl" joint="openarm_right_finger_joint1"
-             kp="10" kv="0.5" ctrlrange="0 0.044" forcerange="-333 333" />
+             kp="200" kv="10.0" ctrlrange="0 0.044" forcerange="-333 333" />
     <position name="right_finger2_ctrl" joint="openarm_right_finger_joint2"
-             kp="10" kv="0.5" ctrlrange="0 0.044" forcerange="-333 333" />
+             kp="200" kv="10.0" ctrlrange="0 0.044" forcerange="-333 333" />
     <!-- head -->
     <position name="head_joint1_ctrl" joint="head_joint_1" class="motor_DM4310" kp = "0.5" kv = "0.05" ctrlrange="-3.1416 3.1416" forcerange="-20 20" />
     <position name="head_joint2_ctrl" joint="head_joint_2" class="motor_DM4310" kp = "1.0" kv = "0.05" ctrlrange="-0.523 0.523" forcerange="-10 10" />

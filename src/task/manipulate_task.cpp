@@ -1,14 +1,26 @@
 #include "task/manipulate_task.hpp"
 
+#include "task/interpolation_motion_planner.hpp"
+#include "task/ompl_motion_planner.hpp"
+
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <stdexcept>
 
 ManipulateTask::ManipulateTask(const std::string& urdf_path,
                                const std::string& ee_frame_name,
                                const std::vector<std::string>& right_arm_joints,
                                const std::vector<std::string>& left_arm_joints)
-    : kinematics_(urdf_path, ee_frame_name, right_arm_joints, left_arm_joints) {
+    : kinematics_(urdf_path, ee_frame_name, right_arm_joints, left_arm_joints),
+      interpolation_planner_(std::make_unique<InterpolationMotionPlanner>(kinematics_)),
+      ompl_planner_(
+#ifdef OPENARM_HAVE_OMPL
+          std::make_unique<OmplMotionPlanner>(kinematics_)
+#else
+          std::make_unique<InterpolationMotionPlanner>(kinematics_)
+#endif
+      ) {
     smoothed_q_cmd_ = Eigen::VectorXd::Zero(kinematics_.nq());
 }
 
@@ -62,62 +74,93 @@ bool ManipulateTask::isNamedPoseReached(const std::string& name, double tol) con
 void ManipulateTask::onStateTransition(int prev_state_id, int next_state_id, double now) {
     (void)prev_state_id;
     (void)now;
-    // Clear any active plan when state changes — new state will create its own plan
-    if (planner_.currentPlan().active &&
-        planner_.currentPlan().owner_state_id != next_state_id) {
-        planner_.clear();
+    if (executor_.hasActiveTrajectory() && executor_.ownerStateId() != next_state_id) {
+        executor_.clear();
     }
-}
 
-void ManipulateTask::ensurePlanForState(const GraspStateMachine::Command& command,
-                                         int state_id, double now) {
-    // If we already have an active plan for this state, just manage lifecycle
-    if (planner_.isActiveForState(state_id)) {
-        const auto mode = planner_.currentPlan().mode;
-        if (mode == JointTrajectoryPlanner::PlanMode::InterpolateThenRefine &&
-            !planner_.currentPlan().refine_phase &&
-            planner_.isInterpolationDone(now)) {
-            planner_.enterRefinePhase();
-        }
+    if (static_cast<GraspStateMachine::State>(next_state_id) == GraspStateMachine::State::Done) {
+        captureHoldPosition();
         return;
     }
 
-    // Create a new plan
-    const auto mode = planModeForState(state_id);
-    const double duration = planDurationForState(state_id);
-    const Eigen::VectorXd& start_q = kinematics_.currentQ();
-    const Eigen::VectorXd goal_q = kinematics_.solveIK(
-        command.target_pos, command.target_quat, start_q);
-
-    planner_.plan(start_q, goal_q, duration, now, mode, state_id,
-                  command.target_pos, command.target_quat);
+    hold_position_active_ = false;
 }
 
-Eigen::VectorXd ManipulateTask::computeJointTargets(
-    const GraspStateMachine::Command& command,
-    int current_state_id,
-    double now) {
-    if (command.mode == GraspStateMachine::CommandMode::JointPose) {
-        return getNamedPoseTargets(command.joint_pose_name);
+bool ManipulateTask::ensureTrajectoryForState(const GraspStateMachine::Command& command,
+                                              int state_id, double now) {
+    if (!stateRequiresArmPlan(command)) {
+        return false;
+    }
+    if (executor_.hasActiveTrajectory() && executor_.ownerStateId() == state_id) {
+        return true;
     }
 
-    // CartesianPose mode — states that use trajectory planning
-    const int pregrasp_id = static_cast<int>(GraspStateMachine::State::Pregrasp);
-    const int descend_id = static_cast<int>(GraspStateMachine::State::Descend);
+    const MotionRequest request = buildMotionRequest(command, state_id);
+    IMotionPlanner& planner = plannerForRequest(request);
+    const char* planner_name =
+        (request.goal_type == GoalType::JointGoal) ? "Interpolation" : "OMPL";
+    const PlannedTrajectory trajectory = planner.createPlan(request);
+    executor_.setTrajectory(trajectory, now);
+    std::cout << "[Planner] state=" << state_id
+              << " type="
+              << ((request.goal_type == GoalType::JointGoal) ? "JointGoal" : "CartesianPoseGoal")
+              << " planner=" << planner_name
+              << " success=" << (trajectory.valid ? "true" : "false")
+              << " points=" << trajectory.points.size()
+              << " duration=" << trajectory.duration
+              << std::endl;
+    return trajectory.valid;
+}
 
-    if (current_state_id == pregrasp_id || current_state_id == descend_id) {
-        ensurePlanForState(command, current_state_id, now);
-
-        if (planner_.currentPlan().refine_phase) {
-            return kinematics_.computeCartesianTargets(
-                command.target_pos, command.target_quat);
+Eigen::VectorXd ManipulateTask::sampleJointTargets(double now) const {
+    if (!executor_.hasActiveTrajectory()) {
+        if (hold_position_active_ && hold_q_.size() == kinematics_.nq()) {
+            return hold_q_;
         }
-        return planner_.interpolate(now);
+        return kinematics_.currentQ();
+    }
+    return executor_.sample(now);
+}
+
+MotionRequest ManipulateTask::buildMotionRequest(
+    const GraspStateMachine::Command& command,
+    int state_id) const {
+    MotionRequest request;
+    request.owner_state_id = state_id;
+    request.start_q = kinematics_.currentQ();
+
+    const auto state = static_cast<GraspStateMachine::State>(state_id);
+    if (state == GraspStateMachine::State::Descend ||
+        state == GraspStateMachine::State::Lift) {
+        request.max_joint_velocity = 0.6;
     }
 
-    // Other CartesianPose states: direct IK
-    return kinematics_.computeCartesianTargets(
-        command.target_pos, command.target_quat);
+    if (command.mode == GraspStateMachine::CommandMode::JointPose) {
+        request.goal_type = GoalType::JointGoal;
+        request.joint_goal_q = getNamedPoseTargets(command.joint_pose_name);
+    } else {
+        request.goal_type = GoalType::CartesianPoseGoal;
+        request.target_pos = command.target_pos;
+        request.target_quat = command.target_quat;
+    }
+
+    return request;
+}
+
+bool ManipulateTask::stateRequiresArmPlan(const GraspStateMachine::Command& command) const {
+    return command.requires_arm_plan;
+}
+
+IMotionPlanner& ManipulateTask::plannerForRequest(const MotionRequest& request) const {
+    if (request.goal_type == GoalType::JointGoal) {
+        return *interpolation_planner_;
+    }
+    return *ompl_planner_;
+}
+
+void ManipulateTask::captureHoldPosition() {
+    hold_q_ = kinematics_.currentQ();
+    hold_position_active_ = true;
 }
 
 Eigen::VectorXd ManipulateTask::smoothJointTargets(
@@ -157,24 +200,4 @@ RobotKinematics& ManipulateTask::kinematics() {
 
 const RobotKinematics& ManipulateTask::kinematics() const {
     return kinematics_;
-}
-
-JointTrajectoryPlanner::PlanMode ManipulateTask::planModeForState(int state_id) const {
-    if (state_id == static_cast<int>(GraspStateMachine::State::Pregrasp)) {
-        return JointTrajectoryPlanner::PlanMode::InterpolateThenRefine;
-    }
-    if (state_id == static_cast<int>(GraspStateMachine::State::Descend)) {
-        return JointTrajectoryPlanner::PlanMode::InterpolateOnly;
-    }
-    return JointTrajectoryPlanner::PlanMode::RefineOnly;
-}
-
-double ManipulateTask::planDurationForState(int state_id) const {
-    if (state_id == static_cast<int>(GraspStateMachine::State::Pregrasp)) {
-        return 2.0;
-    }
-    if (state_id == static_cast<int>(GraspStateMachine::State::Descend)) {
-        return 0.5;
-    }
-    return 1.0;
 }

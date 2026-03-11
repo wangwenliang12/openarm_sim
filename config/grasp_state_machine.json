@@ -2,7 +2,7 @@
     "timing": {
       "home_only_mode": false,
       "home_duration_sec": 5.0,
-      "close_duration_sec": 0.5
+      "close_duration_sec": 1.5
     },
     "poses": {
       "idle": {
@@ -28,7 +28,7 @@
     },
     "cartesian_targets": {
       "pregrasp_height": 0.14,
-      "descend_height": 0.01,
+      "descend_height": 0.001,
       "lift_height": 0.22
     }
   }

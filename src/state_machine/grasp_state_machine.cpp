@@ -6,6 +6,9 @@
 #include <stdexcept>
 
 namespace {
+constexpr double kGripperClosed_ = 0.0;
+constexpr double kGripperOpen_ = 1.0;
+
 void loadJointGroup(const nlohmann::json& group,std::unordered_map<std::string, double>* joint_positions) {
     if (!group.is_object()) {
         throw std::runtime_error("joint group must be a JSON object");
@@ -35,18 +38,16 @@ GraspStateMachine::GraspStateMachine(const std::string& target_object_id)
     : target_object_id_(target_object_id) {}
 
 void GraspStateMachine::initialize(double now,
-                                   const Eigen::Quaterniond& grasp_quat,
                                    const Eigen::Vector3d& current_pos,
                                    const std::string& config_path) {
     loadConfig(config_path);
 
-    grasp_quat_ = grasp_quat;
-    grasp_quat_.normalize();
     state_ = State::Home;
     state_start_time_ = now;
     object_pose_.position = current_pos;
     grasp_target_pose_ = object_pose_;
     pregrasp_start_pos_ = current_pos;
+    lift_start_pos_ = current_pos;
     pregrasp_started_ = false;
     grasp_target_locked_ = false;
 }
@@ -113,8 +114,6 @@ void GraspStateMachine::loadConfig(const std::string& config_path) {
         config_.home_only_mode = timing.value("home_only_mode", config_.home_only_mode);
         config_.home_duration_sec = timing.value("home_duration_sec", config_.home_duration_sec);
         config_.close_duration_sec = timing.value("close_duration_sec", config_.close_duration_sec);
-        config_.pregrasp_move_duration_sec =
-            timing.value("pregrasp_move_duration_sec", config_.pregrasp_move_duration_sec);
     }
 
     if (root.contains("cartesian_targets")) {
@@ -195,8 +194,9 @@ GraspStateMachine::Command GraspStateMachine::handleHome(double now,
     Command cmd;
     cmd.mode = CommandMode::JointPose;
     cmd.joint_pose_name = "idle";
-    cmd.left_gripper_cmd = 1.0;
-    cmd.right_gripper_cmd = 1.0;
+    cmd.left_gripper_cmd = kGripperOpen_;
+    cmd.right_gripper_cmd = kGripperOpen_;
+    cmd.requires_arm_plan = true;
 
     if (shouldLeaveHome(active_joint_pose_reached, now)) {
         transitionTo(State::Pregrasp, now);
@@ -220,8 +220,9 @@ GraspStateMachine::Command GraspStateMachine::handlePregrasp(double now,const Ei
     Command cmd;
     cmd.mode = CommandMode::CartesianPose;
     cmd.target_quat = makeTopDownGraspQuat(grasp_target_pose_.quaternion);
-    cmd.left_gripper_cmd = 1.0;
-    cmd.right_gripper_cmd = 1.0;
+    cmd.left_gripper_cmd = kGripperOpen_;
+    cmd.right_gripper_cmd = kGripperOpen_;
+    cmd.requires_arm_plan = true;
 
     const Eigen::Vector3d goal_pos =
         grasp_target_pose_.position + Eigen::Vector3d(0.0, 0.0, config_.pregrasp_height);
@@ -240,10 +241,11 @@ GraspStateMachine::Command GraspStateMachine::handleDescend(double now,const Eig
     cmd.mode = CommandMode::CartesianPose;
     cmd.target_quat = makeTopDownGraspQuat(grasp_target_pose_.quaternion);
     cmd.target_pos = grasp_target_pose_.position + Eigen::Vector3d(0.0, 0.0, config_.descend_height);
-    cmd.left_gripper_cmd = 1.0;
-    cmd.right_gripper_cmd = 1.0;
+    cmd.left_gripper_cmd = kGripperOpen_;
+    cmd.right_gripper_cmd = kGripperOpen_;
+    cmd.requires_arm_plan = true;
     const double descend_error = (current_pos - cmd.target_pos).norm();
-
+    // std::cout << "descend_error:" << descend_error << std::endl;
     if (descend_error < config_.descend_tolerance) {
         transitionTo(State::Close, now);
     }
@@ -255,10 +257,12 @@ GraspStateMachine::Command GraspStateMachine::handleClose(double now,const Eigen
     cmd.mode = CommandMode::CartesianPose;
     cmd.target_quat = makeTopDownGraspQuat(grasp_target_pose_.quaternion);
     cmd.target_pos = grasp_target_pose_.position + Eigen::Vector3d(0.0, 0.0, config_.descend_height);
-    cmd.left_gripper_cmd = 1.0;
-    cmd.right_gripper_cmd = 0.0;
+    cmd.left_gripper_cmd = kGripperOpen_;
+    cmd.right_gripper_cmd = kGripperClosed_;
+    cmd.requires_arm_plan = false;
 
     if (now - state_start_time_ > config_.close_duration_sec) {
+        lift_start_pos_ = current_pos;
         transitionTo(State::Lift, now);
     }
     return cmd;
@@ -268,9 +272,10 @@ GraspStateMachine::Command GraspStateMachine::handleLift(double now,const Eigen:
     Command cmd;
     cmd.mode = CommandMode::CartesianPose;
     cmd.target_quat = makeTopDownGraspQuat(grasp_target_pose_.quaternion);
-    cmd.target_pos = grasp_target_pose_.position + Eigen::Vector3d(0.0, 0.0, config_.lift_height);
-    cmd.left_gripper_cmd = 1.0;
-    cmd.right_gripper_cmd = 0.0;
+    cmd.target_pos = lift_start_pos_ + Eigen::Vector3d(0.0, 0.0, config_.lift_height);
+    cmd.left_gripper_cmd = kGripperOpen_;
+    cmd.right_gripper_cmd = kGripperClosed_;
+    cmd.requires_arm_plan = true;
 
     if ((current_pos - cmd.target_pos).norm() < config_.lift_tolerance) {
         transitionTo(State::Done, now);
@@ -284,8 +289,9 @@ GraspStateMachine::Command GraspStateMachine::handleDone(double now,const Eigen:
     Command cmd;
     cmd.mode = CommandMode::CartesianPose;
     cmd.target_quat = makeTopDownGraspQuat(grasp_target_pose_.quaternion);
-    cmd.target_pos = grasp_target_pose_.position + Eigen::Vector3d(0.0, 0.0, config_.lift_height);
-    cmd.left_gripper_cmd = 1.0;
-    cmd.right_gripper_cmd = 0.0;
+    cmd.target_pos = lift_start_pos_ + Eigen::Vector3d(0.0, 0.0, config_.lift_height);
+    cmd.left_gripper_cmd = kGripperOpen_;
+    cmd.right_gripper_cmd = kGripperClosed_;
+    cmd.requires_arm_plan = false;
     return cmd;
 }

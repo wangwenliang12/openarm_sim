@@ -31,14 +31,15 @@ public:
         Eigen::Quaterniond target_quat = Eigen::Quaterniond::Identity();
         double left_gripper_cmd = 0.0;
         double right_gripper_cmd = 0.0;
+        bool requires_arm_plan = false;
     };
 
     explicit GraspStateMachine(const std::string& target_object_id);
 
     void initialize(double now,
-                    const Eigen::Quaterniond& grasp_quat,
                     const Eigen::Vector3d& current_pos,
                     const std::string& config_path);
+                    
     Command update(double now,
                    const Eigen::Vector3d& current_pos,
                    const ObjectPose* observed_pose,
@@ -54,12 +55,11 @@ private:
         bool home_only_mode = false;
         double home_duration_sec = 2.0;
         double close_duration_sec = 1.2;
-        double pregrasp_move_duration_sec = 2.0;
         double pregrasp_height = 0.02;
         double descend_height = 0.005;
         double lift_height = 0.22;
         double pregrasp_tolerance = 0.02;
-        double descend_tolerance = 0.012;
+        double descend_tolerance = 0.020;
         double lift_tolerance = 0.03;
         std::unordered_map<std::string, std::unordered_map<std::string, double>> named_joint_poses;
     };
@@ -74,9 +74,9 @@ private:
     double state_start_time_ = 0.0;
     ObjectPose object_pose_;
     ObjectPose grasp_target_pose_;
-    Eigen::Quaterniond grasp_quat_ = Eigen::Quaterniond::Identity();
     Config config_;
     Eigen::Vector3d pregrasp_start_pos_ = Eigen::Vector3d::Zero();
+    Eigen::Vector3d lift_start_pos_ = Eigen::Vector3d::Zero();
     bool pregrasp_started_ = false;
     bool grasp_target_locked_ = false;
 

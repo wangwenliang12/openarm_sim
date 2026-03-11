@@ -36,10 +36,6 @@ public:
                             const Eigen::Quaterniond& quat,
                             const Eigen::VectorXd& seed) const;
 
-    Eigen::VectorXd computeCartesianTargets(
-        const Eigen::Vector3d& pos,
-        const Eigen::Quaterniond& quat) const;
-
     void setHomeQ(const Eigen::VectorXd& q);
     const Eigen::VectorXd& homeQ() const;
 
@@ -48,6 +44,15 @@ public:
     int nv() const;
 
     const pinocchio::Model& model() const;
+    Eigen::VectorXd extractRightArmQ(const Eigen::VectorXd& full_q) const;
+    Eigen::VectorXd mergeRightArmQ(const Eigen::VectorXd& right_arm_q,
+                                   const Eigen::VectorXd& base_q) const;
+    std::vector<double> rightArmLowerBounds() const;
+    std::vector<double> rightArmUpperBounds() const;
+    int rightArmDof() const;
+    Eigen::VectorXd solveRightArmIK(const Eigen::Vector3d& pos,
+                                    const Eigen::Quaterniond& quat,
+                                    const Eigen::VectorXd& seed_q) const;
 
 private:
     pinocchio::Model pin_model_;

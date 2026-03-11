@@ -72,12 +72,6 @@ pinocchio::SE3 RobotKinematics::getEndEffectorPose() {
     return pin_data_.oMf[ee_frame_id_];
 }
 
-Eigen::VectorXd RobotKinematics::computeCartesianTargets(
-    const Eigen::Vector3d& pos,
-    const Eigen::Quaterniond& quat) const {
-    return solveIK(pos, quat, q_robot_);
-}
-
 void RobotKinematics::setHomeQ(const Eigen::VectorXd& q) {
     home_q_ = q;
 }
@@ -100,6 +94,53 @@ int RobotKinematics::nv() const {
 
 const pinocchio::Model& RobotKinematics::model() const {
     return pin_model_;
+}
+
+Eigen::VectorXd RobotKinematics::extractRightArmQ(const Eigen::VectorXd& full_q) const {
+    Eigen::VectorXd right_q(rightArmDof());
+    for (size_t i = 0; i < right_arm_indices_.size(); ++i) {
+        const auto& ji = joints_[static_cast<size_t>(right_arm_indices_[i])];
+        right_q[static_cast<int>(i)] = full_q[ji.pin_q_adr];
+    }
+    return right_q;
+}
+
+Eigen::VectorXd RobotKinematics::mergeRightArmQ(const Eigen::VectorXd& right_arm_q,
+                                                 const Eigen::VectorXd& base_q) const {
+    Eigen::VectorXd merged = base_q;
+    for (size_t i = 0; i < right_arm_indices_.size(); ++i) {
+        const auto& ji = joints_[static_cast<size_t>(right_arm_indices_[i])];
+        merged[ji.pin_q_adr] = right_arm_q[static_cast<int>(i)];
+    }
+    return merged;
+}
+
+std::vector<double> RobotKinematics::rightArmLowerBounds() const {
+    std::vector<double> bounds;
+    bounds.reserve(right_arm_indices_.size());
+    for (const int idx : right_arm_indices_) {
+        bounds.push_back(joints_[static_cast<size_t>(idx)].lower_limit);
+    }
+    return bounds;
+}
+
+std::vector<double> RobotKinematics::rightArmUpperBounds() const {
+    std::vector<double> bounds;
+    bounds.reserve(right_arm_indices_.size());
+    for (const int idx : right_arm_indices_) {
+        bounds.push_back(joints_[static_cast<size_t>(idx)].upper_limit);
+    }
+    return bounds;
+}
+
+int RobotKinematics::rightArmDof() const {
+    return static_cast<int>(right_arm_indices_.size());
+}
+
+Eigen::VectorXd RobotKinematics::solveRightArmIK(const Eigen::Vector3d& target_pos,
+                                                  const Eigen::Quaterniond& target_quat,
+                                                  const Eigen::VectorXd& seed_q) const {
+    return solveIK(target_pos, target_quat, seed_q);
 }
 
 Eigen::VectorXd RobotKinematics::solveIK(const Eigen::Vector3d& target_pos,

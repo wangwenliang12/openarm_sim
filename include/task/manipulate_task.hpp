@@ -3,8 +3,10 @@
 
 #include "robot/robot_kinematics.hpp"
 #include "state_machine/grasp_state_machine.hpp"
-#include "task/joint_trajectory_planner.hpp"
+#include "task/motion_planner.hpp"
+#include "task/trajectory_executor.hpp"
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -28,15 +30,13 @@ public:
     pinocchio::SE3 getEndEffectorPose();
 
     void loadNamedPoses(const NamedPoseMap& poses);
-    Eigen::VectorXd getNamedPoseTargets(const std::string& name) const;
     bool isNamedPoseReached(const std::string& name, double tol) const;
 
-    Eigen::VectorXd computeJointTargets(
-        const GraspStateMachine::Command& command,
-        int current_state_id,
-        double now);
-
     void onStateTransition(int prev_state_id, int next_state_id, double now);
+    bool ensureTrajectoryForState(const GraspStateMachine::Command& command,
+                                  int state_id,
+                                  double now);
+    Eigen::VectorXd sampleJointTargets(double now) const;
 
     Eigen::VectorXd smoothJointTargets(
         const Eigen::VectorXd& q_target,
@@ -48,15 +48,20 @@ public:
     const RobotKinematics& kinematics() const;
 
 private:
-    JointTrajectoryPlanner::PlanMode planModeForState(int state_id) const;
-    double planDurationForState(int state_id) const;
-
-    void ensurePlanForState(const GraspStateMachine::Command& command,
-                            int state_id, double now);
+    MotionRequest buildMotionRequest(const GraspStateMachine::Command& command,
+                                     int state_id) const;
+    Eigen::VectorXd getNamedPoseTargets(const std::string& name) const;
+    bool stateRequiresArmPlan(const GraspStateMachine::Command& command) const;
+    IMotionPlanner& plannerForRequest(const MotionRequest& request) const;
+    void captureHoldPosition();
 
     RobotKinematics kinematics_;
-    JointTrajectoryPlanner planner_;
+    std::unique_ptr<IMotionPlanner> interpolation_planner_;
+    std::unique_ptr<IMotionPlanner> ompl_planner_;
+    TrajectoryExecutor executor_;
     std::unordered_map<std::string, Eigen::VectorXd> named_pose_targets_;
+    Eigen::VectorXd hold_q_;
+    bool hold_position_active_ = false;
     mutable Eigen::VectorXd smoothed_q_cmd_;
 };
 

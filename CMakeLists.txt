@@ -6,6 +6,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(OPENARM_BUILD_LCM_TOOLS "Build LCM pose pub/sub tools" ON)
 
+find_package(ompl QUIET)
+if(ompl_FOUND)
+    message(STATUS "Found OMPL")
+else()
+    message(STATUS "OMPL not found. Building with interpolation planner fallback.")
+endif()
+
 # --- 1. Find Pinocchio ---
 find_program(SHELL_PYTHON3_EXECUTABLE NAMES python3 REQUIRED)
 find_package(Eigen3 QUIET)
@@ -115,8 +122,10 @@ if(OPENARM_BUILD_LCM_TOOLS)
                 src/subscriber/lcm_pose_subscriber.cpp
                 src/state_machine/grasp_state_machine.cpp
                 src/robot/robot_kinematics.cpp
-                src/task/joint_trajectory_planner.cpp
+                src/task/interpolation_motion_planner.cpp
                 src/task/manipulate_task.cpp
+                src/task/ompl_motion_planner.cpp
+                src/task/trajectory_executor.cpp
                 src/runtime/closed_loop_runtime.cpp
             )
 
@@ -133,6 +142,11 @@ if(OPENARM_BUILD_LCM_TOOLS)
                 pinocchio::pinocchio
                 ${LCM_LIBRARIES}
             )
+            if(ompl_FOUND)
+                target_include_directories(openarm_closed_loop PRIVATE ${OMPL_INCLUDE_DIRS})
+                target_link_libraries(openarm_closed_loop PUBLIC ${OMPL_LIBRARIES})
+                target_compile_definitions(openarm_closed_loop PRIVATE OPENARM_HAVE_OMPL=1)
+            endif()
             target_compile_options(openarm_closed_loop PRIVATE ${LCM_CFLAGS_OTHER})
 
             set_target_properties(openarm_closed_loop PROPERTIES
