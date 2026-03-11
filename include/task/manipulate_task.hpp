@@ -17,8 +17,7 @@ struct ControlLimits {
 
 class ManipulateTask {
 public:
-    using NamedPoseMap = std::unordered_map<
-        std::string, std::unordered_map<std::string, double>>;
+    using NamedPoseMap = std::unordered_map<std::string, std::unordered_map<std::string, double>>;
 
     ManipulateTask(const std::string& urdf_path,
                    const std::string& ee_frame_name,
@@ -48,13 +47,12 @@ public:
     const RobotKinematics& kinematics() const;
 
 private:
-    MotionRequest buildMotionRequest(const GraspStateMachine::Command& command,
-                                     int state_id) const;
+    MotionRequest buildMotionRequest(const GraspStateMachine::Command& command,int state_id) const;
     Eigen::VectorXd getNamedPoseTargets(const std::string& name) const;
     bool stateRequiresArmPlan(const GraspStateMachine::Command& command) const;
     IMotionPlanner& plannerForRequest(const MotionRequest& request) const;
     void captureHoldPosition();
-
+    // 负责IK/FK
     RobotKinematics kinematics_;
     std::unique_ptr<IMotionPlanner> interpolation_planner_;
     std::unique_ptr<IMotionPlanner> ompl_planner_;
